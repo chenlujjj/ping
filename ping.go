@@ -106,6 +106,7 @@ func New(addr string) *Pinger {
 // NewPinger returns a new Pinger and resolves the address.
 func NewPinger(addr string) (*Pinger, error) {
 	p := New(addr)
+	fmt.Println("p.id: ", p.id)
 	return p, p.Resolve()
 }
 
@@ -328,6 +329,7 @@ func (p *Pinger) Run() error {
 	}
 	if p.ipv4 {
 		if conn, err = p.listen(ipv4Proto[p.protocol]); err != nil {
+			fmt.Printf("listen ipv4 error: %v \n", err)
 			return err
 		}
 		if err = conn.IPv4PacketConn().SetControlMessage(ipv4.FlagTTL, true); runtime.GOOS != "windows" && err != nil {
@@ -527,12 +529,16 @@ func (p *Pinger) processPacket(recv *packet) error {
 
 	switch pkt := m.Body.(type) {
 	case *icmp.Echo:
+		fmt.Println("recv packet id: ", pkt.ID)
 		// If we are priviledged, we can match icmp.ID
 		if p.protocol == "icmp" {
 			// Check if reply from same ID
+			fmt.Println("protocol is ICMP")
 			if pkt.ID != p.id {
 				return nil
 			}
+		} else {
+			fmt.Println("protocol is UDP")
 		}
 
 		if len(pkt.Data) < timeSliceLength+trackerLength {
@@ -589,6 +595,7 @@ func (p *Pinger) sendICMP(conn *icmp.PacketConn) error {
 		Seq:  p.sequence,
 		Data: t,
 	}
+	fmt.Println("body.ID: ", body.ID)
 
 	msg := &icmp.Message{
 		Type: typ,
